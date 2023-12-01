@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Trail Cribbage</string>
+    <string name="card_hole">Empty spot for a card</string>
+    <string name="face_card">Face down card</string>
+</resources>
