@@ -7,51 +7,9 @@ package name.jdstew.trailcribbage.cribbage
     const val BLUETOOTH_SELECTED: Byte = 3
 */
 
-// listing of game states - first digit is 'phase', second digit is 'step'
-const val INITIALIZATION: Byte = 10
-const val CUT: Byte = 20 // deck shuffled and laid out, no card selected
-const val CUT_1_OF_2: Byte = 21 // 1 of 2 cards selected
-const val CUT_FINISHED: Byte = 22 // 2 of 2 cards selected
-const val DEAL: Byte = 30 // deck shuffled, delt, 6 cards up and 6 down
-const val DEAL_1_OF_2: Byte = 31 // a player selected 2 cards for crib
-const val DEAL_FINISHED: Byte = 32 // both players selected 2 cards for crib
-const val DEAL_STARTER: Byte = 33 // Pone selected cut, next card shown up
-const val PLAY: Byte = 40 // thru 48
-const val SHOW_PONE_HAND: Byte = 50
-const val SHOW_DEALER_HAND: Byte = 51
-const val SHOW_DEALER_CRIB: Byte = 52
-const val COMPLETION: Byte = 60
-const val FINISHED: Byte = 70
+
 
 class GameState {
-
-    /*  unsure if this array is needed
-        val commsState: ByteArray = byteArrayOf(
-            BLUETOOTH_UNKNOWN,
-            BLUETOOTH_ENABLED,
-            BLUETOOTH_PAIRED,
-            BLUETOOTH_SELECTED
-        )
-    */
-
-    val gameSequence: ByteArray = byteArrayOf(
-        INITIALIZATION,
-        CUT,
-        CUT_1_OF_2,
-        CUT_FINISHED,
-        DEAL,
-        DEAL_1_OF_2,
-        DEAL_FINISHED,
-        DEAL_STARTER,
-        PLAY,
-        SHOW_PONE_HAND,
-        SHOW_DEALER_HAND,
-        SHOW_DEALER_CRIB,
-        COMPLETION,
-        FINISHED
-    )
-
-    private var bluetoothState: Byte = 0
 
     // todo: private var opponent: BluetoothDevice? = null
     private var opponentAddress: String? =
@@ -70,7 +28,7 @@ class GameState {
     // game summary (5 bytes)
     private var resyncFlag: Byte =
         0  // 0 if normal data exchange, otherwise force a re-sync to this state
-    private var sequenceIndex: Byte = 0  // index to GAME_SEQUENCE
+    private var gateState: Byte = 0  // index to GAME_SEQUENCE
     private var playerScore: ByteArray = ByteArray(2)  // [2] 0..121
     private var dealerIndex: Byte = -1 // -1 -> neither, 0 -> me, 1 -> them
 
@@ -101,14 +59,6 @@ class GameState {
     // deck is (52 bytes padded to 64 bytes), held and saved only by the dealer during DEAL phase
     private var deck: ByteArray? = null  // [52] random card indexes
 
-    fun setBluetoothState(state: Byte) {
-        bluetoothState = state
-    }
-
-    fun getBluetoothState(): Byte {
-        return bluetoothState
-    }
-
     fun shuffleDeck(): ByteArray? {
         // deck = return Deck.getShuffledDeck()
         return deck
@@ -131,8 +81,12 @@ class GameState {
         return resyncFlag
     }
 
-    fun getGameStateIndex(): Byte {
-        return sequenceIndex
+    fun getGameState(): Byte {
+        return gateState
+    }
+
+    fun setGameState(state: Byte) {
+        gateState = state
     }
 
     fun getPlayerScore(): ByteArray {
@@ -193,7 +147,7 @@ class GameState {
 
         // game summary (5 bytes)
         output[index++] = resyncFlag
-        output[index++] = sequenceIndex
+        output[index++] = gateState
         for (i in playerScore) {
             output[index++] = i
         }
@@ -238,7 +192,7 @@ class GameState {
 
         // game summary (5 bytes)
         newGameState.resyncFlag = input[0]
-        newGameState.sequenceIndex = input[1]
+        newGameState.gateState = input[1]
         var index = 0
         for (i in 2..3) {
             newGameState.playerScore[index++] = input[i]
@@ -292,7 +246,7 @@ class GameState {
         // game summary (5 bytes)
         sb.append(resyncFlag)
         sb.append(',')
-        sb.append(sequenceIndex)
+        sb.append(gateState)
         sb.append(',')
         for (b in playerScore) {
             sb.append(b)

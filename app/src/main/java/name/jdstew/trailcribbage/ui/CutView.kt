@@ -33,6 +33,7 @@ import name.jdstew.trailcribbage.GameModel
 import name.jdstew.trailcribbage.GameModelListener
 import name.jdstew.trailcribbage.R
 import name.jdstew.trailcribbage.cribbage.Deck
+import name.jdstew.trailcribbage.cribbage.GameMessaging
 
 class CutViewModel(
     private val gameModel: GameModel
@@ -69,11 +70,7 @@ class CutViewModel(
         val deck = Deck.getShuffledDeck()
         val cardIndex = deck[cutCardPosition.value.toInt() - 1].toInt()
         thisPlayerCutDrawableID = CardLookup.getCardDrawableID(cardIndex)
-
-
-//        TODO("send selected card to GameModel.updateState(...)")
-//        TODO("removed the below statement once function replaced")
-//        gameModel.selectCutCard(cutCardPosition.floatValue)
+        gameModel.updateState(GameMessaging.getCutSelectedMessage(cardIndex))
 //        TODO("if both cards have been selected, then...")
     }
 
