@@ -1,5 +1,6 @@
 package name.jdstew.trailcribbage.cribbage
 
+import name.jdstew.trailcribbage.cribbage.Deck.getCardDisplayedName
 import name.jdstew.trailcribbage.cribbage.Deck.isCardJack
 import name.jdstew.trailcribbage.cribbage.Deck.getCardValue
 import name.jdstew.trailcribbage.cribbage.Deck.getCardRank
@@ -9,18 +10,19 @@ object Scoring {
 
 //	lateinit var scoringViewModel: ScoringViewModel
 
-    private fun scoreStarter(starter: Int): Int  {
+    private fun scoreStarter(starter: Int): ScoringReport {
+        val report = ScoringReport()
         return if (isCardJack(starter)) {
-    //			scoringViewModel.append("2 points for dealer's heels(J)")
-            print("2 points for dealer's heels(J), ")
-            2
+            report.announcements.add("2 points for dealer's heels (${getCardDisplayedName(starter)})")
+            report.score = 2
+            report
         } else {
-            0
+            report
         }
     }
 
-    private fun scorePlay(playedCards: IntArray, startIndex: Int, nextIndex: Int): Int {
-        var score = 0
+    private fun scorePlay(playedCards: IntArray, startIndex: Int, nextIndex: Int): ScoringReport {
+        val report = ScoringReport()
 
         // check for '15' ... sum of all cards
         var stackSum = 0
@@ -28,9 +30,8 @@ object Scoring {
             stackSum += getCardValue(playedCards[i])
         }
         if (stackSum == 15) {
-            score += 2
-//			scoringViewModel.append("15 for 2 in play stack")
-            print("15 for 2 in play stack, ")
+            report.score += 2
+            report.announcements.add("15 for 2 in play stack")
         }
 
         // check for pairs ... working backwards from last card
@@ -39,23 +40,24 @@ object Scoring {
             var index: Int = nextIndex - 1
             while (index >= startIndex && getCardValue(playedCards[--index]) == getCardValue(
                     playedCards[nextIndex - 1]
-                )) { /* do nothing */ }
+                )
+            ) { /* do nothing */
+            }
 
-            when(playedCardsCount - (index + 1)) {
+            when (playedCardsCount - (index + 1)) {
                 2 -> {
-                    score += 2
-//					scoringViewModel.append("2 of a kind for 2 in play stack")
-                    print("2 of a kind for 2 in play stack, ")
+                    report.score += 2
+                    report.announcements.add("2 of a kind for 2 in play stack")
                 }
+
                 3 -> {
-                    score += 6
-//					scoringViewModel.append("3 of a kind for 6 in play stack")
-                    print("3 of a kind for 6 in play stack, ")
+                    report.score += 6
+                    report.announcements.add("3 of a kind for 6 in play stack")
                 }
+
                 4 -> {
-                    score += 12
-//					scoringViewModel.append("4 of a kind for 12 in play stack")
-                    print("4 of a kind for 12 in play stack, ")
+                    report.score += 12
+                    report.announcements.add("4 of a kind for 12 in play stack")
                 }
             }
         }
@@ -81,17 +83,16 @@ object Scoring {
             } while (isRun && ++runSize <= playedCardsCount)
 
             if (--runSize > 2) {
-                score += runSize
-//				scoringViewModel.append("run of " + runSize + " for " + runSize + " in play stack")
-                print("run of $runSize for $runSize in play stack, ")
+                report.score += runSize
+                report.announcements.add("run of $runSize for $runSize in play stack")
             }
         }
 
-        return score
+        return report
     }
 
-    fun scoreShow(showedCards: IntArray, starter: Int): Int {
-        var score = 0
+    private fun scoreShow(showedCards: IntArray, starter: Int): ScoringReport {
+        val report = ScoringReport()
 
         val cardValues = IntArray(5)
         for (i in 0..3) {
@@ -102,23 +103,24 @@ object Scoring {
         // check for combinations of '15'
         // sum 2 cards... 10 combinations
         for (i in 0..3) {
-            for (j in (i+1)..4) {
+            for (j in (i + 1)..4) {
                 if (cardValues[i] + cardValues[j] == 15) {
-                    score +=2
-//					scoringViewModel.append("15 for 2")
-                    print("15 for 2 (2 cards), ")
+                    report.score += 2
+                    report.announcements.add(
+                        "15 for 2 (${getCardDisplayedName(cardValues[i])} & ${
+                            getCardDisplayedName(cardValues[j])})"
+                    )
                 }
             }
         }
 
         // sum 3 cards... 10 combinations
         for (i in 0..2) {
-            for (j in (i+1)..3) {
-                for (k in (j+1)..4) {
+            for (j in (i + 1)..3) {
+                for (k in (j + 1)..4) {
                     if (cardValues[i] + cardValues[j] + cardValues[k] == 15) {
-                        score +=2
-//						scoringViewModel.append("15 for 2")
-                        print("15 for 2 (3 cards), ")
+                        report.score += 2
+                        report.announcements.add("15 for 2 (3 cards)")
                     }
                 }
             }
@@ -126,36 +128,30 @@ object Scoring {
 
         // sum 4 cards...
         if (cardValues[0] + cardValues[1] + cardValues[2] + cardValues[3] == 15) {
-            score +=2
-//			scoringViewModel.append("15 for 2 (4 cards)")
-            print("15 for 2, ")
+            report.score += 2
+            report.announcements.add("15 for 2 (4 cards)")
         }
         if (cardValues[0] + cardValues[1] + cardValues[2] + cardValues[4] == 15) {
-            score +=2
-//			scoringViewModel.append("15 for 2 (4 cards)")
-            print("15 for 2, ")
+            report.score += 2
+            report.announcements.add("15 for 2 (4 cards)")
         }
         if (cardValues[0] + cardValues[1] + cardValues[3] + cardValues[4] == 15) {
-            score +=2
-//			scoringViewModel.append("15 for 2 (4 cards)")
-            print("15 for 2, ")
+            report.score += 2
+            report.announcements.add("15 for 2 (4 cards)")
         }
         if (cardValues[0] + cardValues[2] + cardValues[3] + cardValues[4] == 15) {
-            score +=2
-//			scoringViewModel.append("15 for 2 (4 cards)")
-            print("15 for 2, ")
+            report.score += 2
+            report.announcements.add("15 for 2 (4 cards)")
         }
         if (cardValues[1] + cardValues[2] + cardValues[3] + cardValues[4] == 15) {
-            score +=2
-//			scoringViewModel.append("15 for 2 (4 cards)")
-            print("15 for 2, ")
+            report.score += 2
+            report.announcements.add("15 for 2 (4 cards)")
         }
 
         // sum 5 cards...
         if (cardValues[0] + cardValues[1] + cardValues[2] + cardValues[3] + cardValues[4] == 15) {
-            score +=2
-//			scoringViewModel.append("15 for 2 (5 cards)")
-            print("15 for 2, ")
+            report.score += 2
+            report.announcements.add("15 for 2 (5 cards)")
         }
 
         // check for run ... last 3 or more cards
@@ -170,7 +166,7 @@ object Scoring {
         for (start in 0..2) {
             for (end in 2..4) {
                 var isRun = true
-                for (i in (start+1)..end) {
+                for (i in (start + 1)..end) {
                     if (cardsRanked[i] - cardsRanked[i - 1] != 1) {
                         isRun = false
                     }
@@ -180,9 +176,8 @@ object Scoring {
         }
 
         if (maxRunSize > 2) {
-            score += maxRunSize
-//			scoringViewModel.append("run of " + maxRunSize + " for " + maxRunSize)
-            print("run of $maxRunSize for $maxRunSize, ")
+            report.score += maxRunSize
+            report.announcements.add("run of $maxRunSize for $maxRunSize")
         }
 
 
@@ -194,39 +189,40 @@ object Scoring {
         cardRanks[4] = getCardRank(starter)
 
         for (rank in 1..13) {
-            when (cardRanks.count{ card -> card == rank}) {
+            when (cardRanks.count { card -> card == rank }) {
                 2 -> {
-                    score += 2
-//					scoringViewModel.append("2 of a kind for 2")
-                    print("2 of a kind for 2, ")
+                    report.score += 2
+                    report.announcements.add("2 of a kind for 2")
                 }
+
                 3 -> {
-                    score += 6
-//					scoringViewModel.append("3 of a kind for 6")
-                    print("3 of a kind for 6, ")
+                    report.score += 6
+                    report.announcements.add("3 of a kind for 6")
                 }
+
                 4 -> {
-                    score += 12
-//					scoringViewModel.append("4 of a kind for 12")
-                    print("4 of a kind for 12, ")
+                    report.score += 12
+                    report.announcements.add("4 of a kind for 12")
                 }
             }
         }
 
         // check for jack of the same suit as starter "nobs"
         for (i in 0..3) {
-            if (getCardRank(showedCards[i]) == 11 && getCardSuit(showedCards[i]) == getCardSuit(starter)) {
-                ++score
-//				scoringViewModel.append("jack same suit as starter for nobs")
-                print("jack same suit as starter for nobs, ")
+            if (getCardRank(showedCards[i]) == 11 && getCardSuit(showedCards[i]) == getCardSuit(
+                    starter
+                )
+            ) {
+                report.score += 1
+                report.announcements.add("jack same suit as starter for nobs")
             }
         }
 
-        return score
+        return report
     }
 
-    fun scoreShowInHand(showedCards: IntArray, starter: Int): Int {
-        var score: Int = scoreShow(showedCards, starter)
+    fun scoreShowInHand(showedCards: IntArray, starter: Int): ScoringReport {
+        val report = scoreShow(showedCards, starter)
 
         // check for a 4 or 5-card flush in hand
         // get suit of first card in crib
@@ -235,26 +231,25 @@ object Scoring {
         // compare each card in crib
         for (i in 1..3) {
             if (getCardSuit(showedCards[i]) != firstCardSuit) {
-                return score
+                return report
             }
         }
 
-        score += 4
-//		scoringViewModel.append("flush in hand for 4")
-        print("flush in hand for 4, ")
+        report.score += 4
+        report.announcements.add("flush in hand for 4")
 
         // compare starter card
         if (getCardSuit(starter) != firstCardSuit) {
-            return score
+            return report
         }
 
-//		scoringViewModel.append("flush with starter for 1")
-        print("flush with starter for 1, ")
-        return score + 1
+        report.announcements.add("flush with starter for 1")
+        report.score += 1
+        return report
     }
 
-    fun scoreShowCrib(showedCards: IntArray, starter: Int): Int {
-        val score: Int = scoreShow(showedCards, starter)
+    fun scoreShowCrib(showedCards: IntArray, starter: Int): ScoringReport {
+        val report = scoreShow(showedCards, starter)
 
         // check for a 5-card flush
 
@@ -264,22 +259,22 @@ object Scoring {
         // compare each card in crib
         for (i in 1..3) {
             if (getCardSuit(showedCards[i]) != firstCardSuit) {
-                return score
+                return report
             }
         }
 
         // compare starter card
         if (getCardSuit(starter) != firstCardSuit) {
-            return score
+            return report
         }
 
-//		scoringViewModel.append("flush in crib and starter for 5")
-        print("flush in crib and starter for 5, ")
-        return score + 5
+        report.announcements.add("flush in crib and starter for 5")
+        report.score += 5
+        return report
     }
 
     fun main() {
-        println(" 0 <==> " + scoreStarter(0) +  " scoreStarter(A)")
+        println(" 0 <==> " + scoreStarter(0) + " scoreStarter(A)")
         println(" 2 <==> " + scoreStarter(10) + " scoreStarter(J)")
 
         var played = intArrayOf(9, 4, 17, 30, 43, 0, -1, -1)
