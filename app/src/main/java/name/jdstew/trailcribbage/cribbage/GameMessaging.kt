@@ -10,6 +10,7 @@ const val DEAL_PONE_COMPLETE: Byte = 31 // a player selected 2 cards for crib
 const val DEAL_DEALER_COMPLETE: Byte = 32 // both players selected 2 cards for crib
 const val DEAL_STARTER_CUT: Byte = 33 // Pone selected cut, next card shown up
 const val DEAL_STARTER_SELECTED: Byte = 34
+const val DEAL_STARTER_REVEALED: Byte = 35
 const val PLAY_START: Byte = 40 // thru 48 for each card played
 const val PLAY_CARD_1: Byte = 41
 const val PLAY_CARD_2: Byte = 42
@@ -39,15 +40,17 @@ byte0					|byte1	|byte2	|byte3	|byte4	|byte5	|byte6	|byte7
 	22					|oc		|0		|0		|0		|0		|0		|0
 22	20|30		both	|20|30	|0		|0		|0		|0		|0		|0
   \display both selected cards with next step indicated
-30	31|32		dealer	|card1	|card2	|card3	|card4	|card5	|card6	|0
+30	31|32		dealer	|player|card1	|card2	|card3	|card4	|card5	|card6
   \display 6 delt cards
-31	32			pone	|crib1	|crib2	|0		|0		|0		|0		|0
+31	32			pone	|crib0	|crib1	|0		|0		|0		|0		|0
   \display 2 opponent's crib cards (face down)
-32	33			dealer	|0		|0		|0		|0		|0		|0		|0
+32	33			dealer	|crib2	|crib3	|0		|0		|0		|0		|0
   \display 2 dealer's crib cards (face down)
-33	34			pone	cI		|0		|0		|0		|0		|0		|0
+33	34			dealer	cI		|0		|0		|0		|0		|0		|0
   \display second screen for selected starter card
-34	40			dealer	cC		|0		|0		|0		|0		|dcp	|pcp
+34	35			pone	cI		|0		|0		|0		|0		|0		|0
+  \communicate starter index
+35	40			dealer	cC		|0		|0		|0		|0		|dcp	|pcp
   \display starter card
 40	41			dealer	|0		|0		|0		|0		|0		|0		|0
   \
@@ -59,15 +62,15 @@ byte0					|byte1	|byte2	|byte3	|byte4	|byte5	|byte6	|byte7
   \
 44	45|49		either	|sc		|sI		|eI		|0		|0		|dcp	|pcp
   \
-45	46|49		either	sc		sI		eI		|0		|0		|dcp		|pcp
+45	46|49		either	|sc		|sI		|eI		|0		|0		|dcp		|pcp
   \
-46	47|49		either	sc		sI		eI		|0		|0		|dcp		|pcp
+46	47|49		either	|sc		|sI		|eI		|0		|0		|dcp		|pcp
   \
-47	48|49		either	sc		sI		eI		|0		|0		|dcp		|pcp
+47	48|49		either	|sc		|sI		|eI		|0		|0		|dcp		|pcp
   \
-48	50			either	sc		sI		eI		|0		|0		|dcp		|pcp
+48	50			either	|sc		|sI		|eI		|0		|0		|dcp		|pcp
   \
-49	44|45|47|48	either	|0		|0		|0		|0		|0		|dcp		|pcp
+49	44|45|47|48	either	|gC		|0		|0		|0		|0		|dcp		|pcp
   \
 50	51			pone	hand1	hand2	hand3	hand4	|0		|dcp		|pcp
   \
@@ -87,6 +90,7 @@ cC = cut card
 sc = selected card
 sI = starting index
 eI = ending index
+gC = go count
 dcp = dealer's cumulative points
 pcp = op[pone]nt's cumulative points
  */
@@ -102,7 +106,8 @@ object GameMessaging {
         DEAL_PONE_COMPLETE to setOf(DEAL_DEALER_COMPLETE, DEAL_STARTER_CUT), // need to check for both
         DEAL_DEALER_COMPLETE to setOf(DEAL_PONE_COMPLETE, DEAL_STARTER_CUT), // need to check for both
         DEAL_STARTER_CUT to setOf(DEAL_STARTER_SELECTED),
-        DEAL_STARTER_SELECTED to setOf(PLAY_START),
+        DEAL_STARTER_SELECTED to setOf(DEAL_STARTER_REVEALED),
+        DEAL_STARTER_REVEALED to setOf(PLAY_START),
         PLAY_START to setOf(PLAY_CARD_1),
         PLAY_CARD_1 to setOf(PLAY_CARD_2),
         PLAY_CARD_2 to setOf(PLAY_CARD_3),

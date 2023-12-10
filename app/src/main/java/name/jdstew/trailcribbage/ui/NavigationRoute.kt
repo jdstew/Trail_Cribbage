@@ -5,6 +5,7 @@ sealed class NavigationRoute(val route: String) {
     object ScanListScreen: NavigationRoute(route = "scan_list_screen")
     object CutScreen: NavigationRoute(route = "cut_screen")
     object DealScreen: NavigationRoute(route = "deal_screen")
+    object DealStarterCutScreen: NavigationRoute(route = "deal_cut_screen")
     object PlayScreen: NavigationRoute(route = "play_screen")
     object ScoringScreen: NavigationRoute(route = "scoring_screen")
     object RoundFinishedScreen: NavigationRoute(route = "round_finished_screen")

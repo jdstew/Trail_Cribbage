@@ -1,6 +1,7 @@
 package name.jdstew.trailcribbage.ui
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -15,7 +16,7 @@ import name.jdstew.trailcribbage.ui.ScoringScreen
 import name.jdstew.trailcribbage.ui.SplashScreen
 
 @Composable
-fun GameNavigation() {
+fun GameNavigation(): NavHostController {
     val navHostController = rememberNavController()
     NavHost(
         navController = navHostController,
@@ -28,10 +29,13 @@ fun GameNavigation() {
             ScanListScreen(navController = navHostController) // NavBackStackEntry
         }
         composable(route = NavigationRoute.CutScreen.route) {
-            CutScreen(navController = navHostController) // NavBackStackEntry
+            CutScreen() // NavBackStackEntry
         }
         composable(route = NavigationRoute.DealScreen.route) {
             DealScreen(navController = navHostController) // NavBackStackEntry
+        }
+        composable(route = NavigationRoute.DealStarterCutScreen.route) {
+            DealStarterCutScreen(navController = navHostController) // NavBackStackEntry
         }
         composable(route = NavigationRoute.PlayScreen.route) {
             PlayScreen(navController = navHostController) // NavBackStackEntry
@@ -58,4 +62,5 @@ fun GameNavigation() {
 //            CutScreen(name = entry.arguements?.getString("name"))  // the composable view
 //        }
     }
+    return navHostController
 }

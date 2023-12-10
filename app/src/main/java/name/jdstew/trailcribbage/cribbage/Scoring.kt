@@ -10,7 +10,7 @@ object Scoring {
 
 //	lateinit var scoringViewModel: ScoringViewModel
 
-    private fun scoreStarter(starter: Int): ScoringReport {
+    fun scoreStarter(starter: Int): ScoringReport {
         val report = ScoringReport()
         return if (isCardJack(starter)) {
             report.announcements.add("2 points for dealer's heels (${getCardDisplayedName(starter)})")
@@ -21,7 +21,7 @@ object Scoring {
         }
     }
 
-    private fun scorePlay(playedCards: IntArray, startIndex: Int, nextIndex: Int): ScoringReport {
+    fun scorePlay(playedCards: IntArray, startIndex: Int, nextIndex: Int): ScoringReport {
         val report = ScoringReport()
 
         // check for '15' ... sum of all cards

@@ -20,11 +20,17 @@ import androidx.compose.ui.Modifier
 import name.jdstew.trailcribbage.ui.theme.TrailCribbageTheme
 import android.os.Handler
 import android.os.Looper
+import android.widget.Toast
+import androidx.navigation.NavController
+import name.jdstew.trailcribbage.cribbage.ME_MINE
 import name.jdstew.trailcribbage.ui.GameNavigation
+import name.jdstew.trailcribbage.ui.NavigationRoute
 
 private const val TAG = "MainActivity"
 
 class MainActivity : ComponentActivity() {
+
+    private lateinit var navHostController: NavController
 
     private lateinit var bluetoothManager: BluetoothManager
     private lateinit var bluetoothAdapter: BluetoothAdapter
@@ -36,13 +42,14 @@ class MainActivity : ComponentActivity() {
     // create an activity request launcher with a contract and ActivityResult lambda
     // 'this' below is a ComponentActivity
     private val activityResultLauncher = this.registerForActivityResult(
-        startActivityForResultContract) { activityResult ->
-            if (activityResult.resultCode == Activity.RESULT_OK) {
-                Log.i(TAG, "Bluetooth has been turned on via ActivityResultCallback")
-            } else if (activityResult.resultCode == Activity.RESULT_CANCELED) {
-                Log.i(TAG, "User has rejected Bluetooth access request or an error has occurred")
-            }
+        startActivityForResultContract
+    ) { activityResult ->
+        if (activityResult.resultCode == Activity.RESULT_OK) {
+            Log.i(TAG, "Bluetooth has been turned on via ActivityResultCallback")
+        } else if (activityResult.resultCode == Activity.RESULT_CANCELED) {
+            Log.i(TAG, "User has rejected Bluetooth access request or an error has occurred")
         }
+    }
 
 
     private var scanning = false
@@ -79,7 +86,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.i(TAG, "onCreate() started")
 
         setContent {
             TrailCribbageTheme {
@@ -88,27 +94,31 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    GameNavigation()
+                    // WARNING: construction of the navigation graph is asynchronous -
+                    // early calls will produce log warnings and no actions
+                    navHostController = GameNavigation()
+                    GameModel.setMainActivity(activity = this)
                 }
             }
         }
-/*
-        bluetoothManager =
-            application.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-        bluetoothAdapter = bluetoothManager.adapter
 
-        if (bluetoothAdapter.isEnabled) {
-            Log.i(TAG, "BluetoothAdapter found enabled")
-//            GameServer.startServer(application, bluetoothManager, bluetoothAdapter)
-        } else {
-            Log.i(TAG, "BluetoothAdapter found NOT enabled")
-            activityResultLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
-        }
+        /*
+                bluetoothManager =
+                    application.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+                bluetoothAdapter = bluetoothManager.adapter
 
-        // method fails if Bluetooth adapter is not enabled
-        bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
-        scanLeDevice()
- */
+                if (bluetoothAdapter.isEnabled) {
+                    Log.i(TAG, "BluetoothAdapter found enabled")
+        //            GameServer.startServer(application, bluetoothManager, bluetoothAdapter)
+                } else {
+                    Log.i(TAG, "BluetoothAdapter found NOT enabled")
+                    activityResultLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+                }
+
+                // method fails if Bluetooth adapter is not enabled
+                bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
+                scanLeDevice()
+         */
     }
 
     // Run the game server as long as the app is on screen
@@ -119,5 +129,31 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
     }
+
+    fun navigateTo(destinationScreen: NavigationRoute, returnScreen: NavigationRoute) {
+        if (this::navHostController.isInitialized) {
+            navHostController.navigate(destinationScreen.route) {
+                popUpTo(returnScreen.route)
+            }
+        } else {
+            Log.w(TAG, "navHostController not yet initialized in Main Activity")
+        }
+    }
+
+    fun announce(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
+
+    fun announce(player: Byte, messages: List<String>) {
+        if (player == ME_MINE) {
+            announce("You:")
+        } else {
+            announce("Your opponent:")
+        }
+        messages.forEach{
+            announce(it)
+        }
+    }
+
 }
 

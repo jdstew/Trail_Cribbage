@@ -7,7 +7,10 @@ package name.jdstew.trailcribbage.cribbage
     const val BLUETOOTH_SELECTED: Byte = 3
 */
 
-
+const val DEALER_IS_ME = 127.toByte()
+const val DEALER_IS_OPPONENT = (-127).toByte()
+const val ME_MINE = 127.toByte()
+const val OPPONENT_THEIRS = (-127).toByte()
 
 class GameState {
 
@@ -28,12 +31,12 @@ class GameState {
     // game summary (5 bytes)
     private var resyncFlag: Byte =
         0  // 0 if normal data exchange, otherwise force a re-sync to this state
-    private var gateState: Byte = 0  // index to GAME_SEQUENCE
+    private var gameState: Byte = 0  // index to GAME_SEQUENCE
     private var playerScore: ByteArray = ByteArray(2)  // [2] 0..121
-    private var dealerIndex: Byte = -1 // -1 -> neither, 0 -> me, 1 -> them
+    private var dealerID: Byte = 0 // value: 0 -> neither, DEALER_IS_ME -> me, DEALER_IS_OPPONENT -> them
 
     // cut (2 bytes)
-    private var cut: ByteArray = ByteArray(2) // [2] playerID and ue of card
+    private var cut: ByteArray = ByteArray(2) { _ -> -1 } // index: 0 -> me, 1 -> them
 
     // deal and show (17 bytes)
     private var handMine: ByteArray =
@@ -45,29 +48,45 @@ class GameState {
     private var starter: Byte = -1 // index to value of card
 
     // play is (19 bytes)
-    private var playNextToGo: Byte = -1 // 0 -> me, 1 -> them
+    private var playWhosNextTurn: Byte = 0 // ME_MINE, OPPONENT_THEIRS
+    private var playGoCount: Byte = 0 // count of "go's"
     private var playHandMine: ByteArray =
         ByteArray(4) { _ -> -1 } //copied from hand, set to -1 once played from hand
     private var playHandOppo: ByteArray =
         ByteArray(4) { _ -> -1 } //copied from hand, set to -1 once played from hand
-    private var playCards: ByteArray = ByteArray(8) { _ -> -1 }  // [8], copied from playerHand
-    private var playStartIndex: Byte = 0  // 0..8
-    private var playNextIndex: Byte = 1  // 1..8
+    private var playedCards: ByteArray = ByteArray(8) { _ -> -1 }  // [8], copied from playerHand
+    private var playedStartIndex: Byte = 0  // 0..7
+    private var playedNextIndex: Byte = 1  // 0..7
     //
     // ------------------------------------------------ end of game state
 
     // deck is (52 bytes padded to 64 bytes), held and saved only by the dealer during DEAL phase
-    private var deck: ByteArray? = null  // [52] random card indexes
+    private var deck: ByteArray = Deck.getShuffledDeck()  // [52] random card indexes
 
-    fun shuffleDeck(): ByteArray? {
-        // deck = return Deck.getShuffledDeck()
-        return deck
+    fun getCardFromDeck(deckIndex: Byte): Byte {
+        return deck[deckIndex.toInt()]
     }
 
-    fun getDeck(): ByteArray? {
-        return deck
+    fun getHandOfOpponentMessage(): ByteArray {
+        val deck = Deck.getShuffledDeck()
+        handOppo[0] = deck[41]
+        handOppo[1] = deck[43]
+        handOppo[2] = deck[45]
+        handOppo[3] = deck[47]
+        handOppo[4] = deck[49]
+        handOppo[5] = deck[51]
+        return byteArrayOf(DEAL_START, OPPONENT_THEIRS, deck[51], deck[49], deck[47], deck[45], deck[43], deck[41])
     }
 
+    fun getHandOfMineMessage(): ByteArray {
+        handMine[0] = deck[40]
+        handMine[1] = deck[42]
+        handMine[2] = deck[44]
+        handMine[3] = deck[46]
+        handMine[4] = deck[48]
+        handMine[5] = deck[50]
+        return byteArrayOf(DEAL_START, ME_MINE, deck[50], deck[48], deck[46], deck[44], deck[42], deck[40])
+    }
 
     fun setOpponentAlias(alias: String): Unit {
         opponentAlias = alias
@@ -82,19 +101,104 @@ class GameState {
     }
 
     fun getGameState(): Byte {
-        return gateState
+        return gameState
     }
 
     fun setGameState(state: Byte) {
-        gateState = state
+        gameState = state
     }
 
-    fun getPlayerScore(): ByteArray {
-        return playerScore
+    fun getMyCut(): Byte {
+        return cut[0]
     }
 
-    fun getDealerIndex(): Byte {
-        return dealerIndex
+    fun setMyCut(myCut: Byte) {
+        cut[0] = myCut
+    }
+
+    fun getOpponentCut(): Byte {
+        return cut[1]
+    }
+
+    fun setOpponentCut(opponentCut: Byte) {
+        cut[1] = opponentCut
+    }
+
+    fun setDealerCrib(card1: Byte, card2: Byte) {
+        crib[0] = card1
+        crib[1] = card2
+        setPlayHand(card1, card2)
+    }
+
+    fun setOpponentCrib(card1: Byte, card2: Byte) {
+        crib[2] = card1
+        crib[3] = card2
+        setPlayHand(card1, card2)
+    }
+
+    private fun setPlayHand(card1: Byte, card2: Byte) {
+        if (dealerID == DEALER_IS_ME) {
+            handMine[handMine.binarySearch(card1)] = -1
+            handMine[handMine.binarySearch(card2)] = -1
+            handMine.sort()
+            for (i in 2..5) {
+                playHandMine[i - 2] = handMine[i]
+            }
+        } else {
+            handOppo[handOppo.binarySearch(card1)] = -1
+            handOppo[handOppo.binarySearch(card2)] = -1
+            handOppo.sort()
+            for (i in 2..5) {
+                playHandOppo[i - 2] = handOppo[i]
+            }
+        }
+    }
+
+    fun removePlayedCard(player: Byte, card: Byte) {
+        if (player == ME_MINE) {
+            for (i in 0..3) {
+                // remove card from play hand
+                if (playHandMine[i] == card) {
+                    playHandMine[i] = -1
+                }
+            }
+        } else {
+            for (i in 0..3) {
+                // remove card from play hand
+                if (playHandOppo[i] == card) {
+                    playHandOppo[i] = -1
+                }
+            }
+        }
+    }
+
+    fun resetCut() {
+        cut[0] = -1
+        cut[1] = -1
+    }
+
+    fun resetRound() {
+        // reset deal and show
+        handMine = ByteArray(6) { _ -> -1 }
+        handOppo = ByteArray(6) { _ -> -1 }
+        crib = ByteArray(4)
+        starter = -1
+
+        // reset play
+        playWhosNextTurn = 0
+        playHandMine = ByteArray(4) { _ -> -1 }
+        playHandOppo = ByteArray(4) { _ -> -1 }
+        playedCards = ByteArray(8) { _ -> -1 }
+        playedStartIndex = 0
+        playedNextIndex = 1
+    }
+
+    fun getDealerID(): Byte {
+        return dealerID
+    }
+
+    fun setDealerID(id: Byte) {
+        dealerID = id
     }
 
     fun getCut(): ByteArray {
@@ -117,28 +221,78 @@ class GameState {
         return starter
     }
 
-    fun getPlayNextToGo(): Byte {
-        return playNextToGo
+    fun setStarter(starterCard: Byte) {
+        starter = starterCard
     }
 
-    fun getPlayHandMine(): ByteArray {
-        return playHandMine
+    fun getPlayWhosNextTurn(): Byte {
+        return playWhosNextTurn
     }
 
-    fun getPlayHandOppo(): ByteArray {
-        return playHandOppo
+    fun setPlayWhosNextTurn(player: Byte) {
+        playWhosNextTurn = player
     }
 
-    fun getPlayCards(): ByteArray {
-        return playCards
+    fun getPlayGoCount(): Byte {
+        return playGoCount
     }
 
-    fun getPlayStartIndex(): Byte {
-        return playStartIndex
+    fun setPlayGoCount(count: Byte) {
+        playGoCount = count
     }
 
-    fun getPlayNextIndex(): Byte {
-        return playNextIndex
+    fun setPlayedCard(card: Byte, index: Byte) {
+        playedCards[index.toInt()] = card
+        playedNextIndex = (index + 1).toByte()
+    }
+
+    fun getPlayedCardsSum(): Byte {
+        var sum = 0
+        for (i in playedStartIndex.toInt()..playedNextIndex.toInt()) {
+            sum += Deck.getCardValue(playedCards[i].toInt())
+        }
+
+        return sum.toByte()
+    }
+
+    fun getPlayedCardsScore(): ScoringReport {
+        val playStackSize = playedNextIndex.toInt() - playedStartIndex.toInt()
+        val playStack = intArrayOf(playStackSize)
+        var j = playedStartIndex.toInt()
+        for (i in 0..playStackSize) {
+            playStack[i] = playedCards[j++].toInt()
+        }
+        return Scoring.scorePlay(playStack, 0, playStackSize)
+    }
+
+    fun addToScore(player: Byte, points: Byte): Byte {
+        if (player == ME_MINE) {
+            playerScore[0] = (playerScore[0] + points).toByte()
+            return playerScore[0]
+        } else {
+            playerScore[1] = (playerScore[1] + points).toByte()
+            return playerScore[1]
+        }
+    }
+
+    fun getPlayerScore(player: Byte): Byte {
+        if (player == ME_MINE) {
+            return playerScore[0]
+        } else {
+            return playerScore[1]
+        }
+    }
+
+    fun getplayedCards(): ByteArray {
+        return playedCards
+    }
+
+    fun getplayedStartIndex(): Byte {
+        return playedStartIndex
+    }
+
+    fun getplayedNextIndex(): Byte {
+        return playedNextIndex
     }
 
     fun serializeGameState(): ByteArray {
@@ -147,11 +301,11 @@ class GameState {
 
         // game summary (5 bytes)
         output[index++] = resyncFlag
-        output[index++] = gateState
+        output[index++] = gameState
         for (i in playerScore) {
             output[index++] = i
         }
-        output[index++] = dealerIndex
+        output[index++] = dealerID
 
         // cut (2 bytes)
         for (i in cut) {
@@ -171,18 +325,19 @@ class GameState {
         output[index++] = starter
 
         // play is (19 bytes)
-        output[index++] = playNextToGo
+        output[index++] = playWhosNextTurn
+        // todo: add playGoCount
         for (i in playHandMine) {
             output[index++] = i
         }
         for (i in playHandOppo) {
             output[index++] = i
         }
-        for (i in playCards) {
+        for (i in playedCards) {
             output[index++] = i
         }
-        output[index++] = playStartIndex
-        output[index] = playNextIndex
+        output[index++] = playedStartIndex
+        output[index] = playedNextIndex
 
         return output
     }
@@ -192,12 +347,12 @@ class GameState {
 
         // game summary (5 bytes)
         newGameState.resyncFlag = input[0]
-        newGameState.gateState = input[1]
+        newGameState.gameState = input[1]
         var index = 0
         for (i in 2..3) {
             newGameState.playerScore[index++] = input[i]
         }
-        newGameState.dealerIndex = input[4]
+        newGameState.dealerID = input[4]
 
         // cut (2 bytes)
         index = 0
@@ -221,7 +376,8 @@ class GameState {
         newGameState.starter = input[23]
 
         // play is (19 bytes)
-        newGameState.playNextToGo = input[24]
+        newGameState.playWhosNextTurn = input[24]
+        // todo: add playGoCount
         index = 0
         for (i in 25..28) {
             newGameState.playHandOppo[index++] = input[i]
@@ -232,10 +388,10 @@ class GameState {
         }
         index = 0
         for (i in 33..40) {
-            newGameState.playCards[index++] = input[i]
+            newGameState.playedCards[index++] = input[i]
         }
-        newGameState.playStartIndex = input[41]
-        newGameState.playNextIndex = input[42]
+        newGameState.playedStartIndex = input[41]
+        newGameState.playedNextIndex = input[42]
 
         return newGameState
     }
@@ -246,13 +402,13 @@ class GameState {
         // game summary (5 bytes)
         sb.append(resyncFlag)
         sb.append(',')
-        sb.append(gateState)
+        sb.append(gameState)
         sb.append(',')
         for (b in playerScore) {
             sb.append(b)
             sb.append(',')
         }
-        sb.append(dealerIndex)
+        sb.append(dealerID)
         sb.append(',')
 
         // cut (2 bytes)
@@ -277,7 +433,8 @@ class GameState {
         sb.append(starter)
 
         // play is (19 bytes)
-        sb.append(playNextToGo)
+        sb.append(playWhosNextTurn)
+        // todo: add playGoCount
         sb.append(',')
         for (b in playHandMine) {
             sb.append(b)
@@ -287,13 +444,13 @@ class GameState {
             sb.append(b)
             sb.append(',')
         }
-        for (b in playCards) {
+        for (b in playedCards) {
             sb.append(b)
             sb.append(',')
         }
-        sb.append(playStartIndex)
+        sb.append(playedStartIndex)
         sb.append(',')
-        sb.append(playNextIndex)
+        sb.append(playedNextIndex)
         sb.append(System.lineSeparator())
 
         return sb.toString()
