@@ -1,6 +1,9 @@
 package name.jdstew.trailcribbage
 
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
 import android.util.Log
+import name.jdstew.trailcribbage.bluetooth.BluetoothBroker
 import name.jdstew.trailcribbage.cribbage.*
 import name.jdstew.trailcribbage.ui.NavigationRoute
 
@@ -9,12 +12,31 @@ object GameModel : GameModelListener {
     private val TAG = "GameModel"
 
     private lateinit var mainActivity: MainActivity
+    private lateinit var bluetoothManager: BluetoothManager
+    private lateinit var bluetoothAdapter: BluetoothAdapter
+    private lateinit var bluetoothBroker: BluetoothBroker
 
     private val stateChangeListeners = mutableSetOf<GameModelListener>()
     private var gameState = GameState()
 
-    fun setMainActivity(activity: MainActivity) {
-        mainActivity = activity
+    fun configure(
+        mainActivity: MainActivity,
+        bluetoothManager: BluetoothManager,
+        bluetoothAdapter: BluetoothAdapter,
+    ) {
+        this.mainActivity = mainActivity
+        this.bluetoothManager = bluetoothManager
+        this.bluetoothAdapter = bluetoothAdapter
+        bluetoothBroker = BluetoothBroker(
+            mainActivity = mainActivity,
+            bluetoothManager = bluetoothManager,
+            bluetoothAdapter = bluetoothAdapter,
+            gameModel = this
+        )
+    }
+
+    fun getBluetoothBroker(): BluetoothBroker{
+        return bluetoothBroker
     }
 
     fun addGameModelListener(listener: GameModelListener) {
@@ -297,4 +319,27 @@ object GameModel : GameModelListener {
 
     }
 
+    fun getOpponentName(): String? {
+        return gameState.getOpponentName()
+    }
+
+    fun setOpponentName(name: String) {
+        gameState.setOpponentName(name)
+    }
+
+    fun getOpponentAddress(): String? {
+        return gameState.getOpponentAddress()
+    }
+
+    fun setOpponentAddress(address: String) {
+        gameState.setOpponentAddress(address)
+    }
+
+    fun getOpponentAlias(): String? {
+        return gameState.getOpponentAlias()
+    }
+
+    fun setOpponentAlias(alias: String) {
+        gameState.setOpponentAlias(alias)
+    }
 }

@@ -8,7 +8,10 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,9 +25,11 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.navigation.NavController
+import name.jdstew.trailcribbage.bluetooth.BluetoothBroker
 import name.jdstew.trailcribbage.cribbage.ME_MINE
 import name.jdstew.trailcribbage.ui.GameNavigation
 import name.jdstew.trailcribbage.ui.NavigationRoute
+import name.jdstew.trailcribbage.ui.OpponentViewModel
 
 private const val TAG = "MainActivity"
 
@@ -34,7 +39,6 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var bluetoothManager: BluetoothManager
     private lateinit var bluetoothAdapter: BluetoothAdapter
-    private lateinit var bluetoothLeScanner: BluetoothLeScanner
 
     // create a result contract for the callback results
     private val startActivityForResultContract = ActivityResultContracts.StartActivityForResult()
@@ -52,37 +56,6 @@ class MainActivity : ComponentActivity() {
     }
 
 
-    private var scanning = false
-    private val handler = Looper.myLooper()?.let { Handler(it) }
-
-    // Stops scanning after 10 seconds.
-    private val SCAN_PERIOD: Long = 10000
-
-    @SuppressLint("MissingPermission")
-    private fun scanLeDevice() {
-        if (!scanning) { // Stops scanning after a pre-defined scan period.
-            handler?.postDelayed({
-                scanning = false
-                bluetoothLeScanner.stopScan(leScanCallback)
-            }, SCAN_PERIOD)
-            scanning = true
-            bluetoothLeScanner.startScan(leScanCallback)
-        } else {
-            scanning = false
-            bluetoothLeScanner.stopScan(leScanCallback)
-        }
-    }
-
-    private val leDeviceListAdapter: ArrayList<BluetoothDevice> = ArrayList()
-
-    // Device scan callback.
-    private val leScanCallback: ScanCallback = object : ScanCallback() {
-        override fun onScanResult(callbackType: Int, result: ScanResult) {
-            super.onScanResult(callbackType, result)
-            leDeviceListAdapter.add(result.device)
-            println("Bluetooth LE device found: " + result.device)
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -97,31 +70,44 @@ class MainActivity : ComponentActivity() {
                     // WARNING: construction of the navigation graph is asynchronous -
                     // early calls will produce log warnings and no actions
                     navHostController = GameNavigation()
-                    GameModel.setMainActivity(activity = this)
                 }
             }
         }
 
-        /*
-                bluetoothManager =
-                    application.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
-                bluetoothAdapter = bluetoothManager.adapter
 
-                if (bluetoothAdapter.isEnabled) {
-                    Log.i(TAG, "BluetoothAdapter found enabled")
-        //            GameServer.startServer(application, bluetoothManager, bluetoothAdapter)
-                } else {
-                    Log.i(TAG, "BluetoothAdapter found NOT enabled")
-                    activityResultLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
-                }
+        bluetoothManager =
+            application.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        bluetoothAdapter = bluetoothManager.adapter
 
-                // method fails if Bluetooth adapter is not enabled
-                bluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
-                scanLeDevice()
-         */
+        while (!bluetoothAdapter.isEnabled) {
+            Log.i(TAG, "BluetoothAdapter found NOT enabled, launching permission request")
+            activityResultLauncher.launch(Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE))
+
+            if (!bluetoothAdapter.isEnabled) {
+                Log.i(TAG, "Waiting 10 seconds, then asking again to turn on Bluetooth")
+
+                // blocking wait timer...
+                // parameters are: duration and tick period
+                val wait = object: CountDownTimer(10_000, 1_000) {
+                    override fun onFinish() {
+                        // do nothing
+                    }
+
+                    override fun onTick(p0: Long) {
+                        // do nothing, but maybe display/toast when to retry
+                    }
+                }.start()
+            }
+        }
+
+        GameModel.configure(
+            mainActivity = this,
+            bluetoothManager = bluetoothManager,
+            bluetoothAdapter = bluetoothAdapter,
+        )
+        // todo: navigateTo() ...scan for opponents screen
     }
-
-    // Run the game server as long as the app is on screen
+    
     override fun onStart() {
         super.onStart()
     }
@@ -150,10 +136,9 @@ class MainActivity : ComponentActivity() {
         } else {
             announce("Your opponent:")
         }
-        messages.forEach{
+        messages.forEach {
             announce(it)
         }
     }
-
 }
 

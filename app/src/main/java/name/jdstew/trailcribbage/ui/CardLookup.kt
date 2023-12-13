@@ -61,7 +61,15 @@ object CardLookup {
         51 to R.drawable.card_51
     )
 
-    fun getCardDrawableID(index: Int): Int? {
-        return cardMap[index]
+    fun getCardDrawableID(index: Int): Int {
+        return cardMap[index]!!
     }
+
+    fun getCardIndex(drawableID: Int): Int {
+        cardMap.forEach{
+            if (it.value == drawableID) return it.key
+        }
+        return DEFAULT_CARD_INDEX
+    }
+
 }

@@ -2,4 +2,10 @@
     <string name="app_name">Trail Cribbage</string>
     <string name="card_hole">Empty spot for a card</string>
     <string name="face_card">Face down card</string>
+    <!--
+    <string name="announce_dealer">You will deal first</string>
+    <string name="announce_opponent">Your opponent will deal first</string>
+    <string name="announce_cut_match">Cut cards are equal, let\'s re-cut</string>
+    <string name="announce_count_cards">Let\'s count cards</string>
+    -->
 </resources>

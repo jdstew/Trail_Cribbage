@@ -15,6 +15,8 @@ const val OPPONENT_THEIRS = (-127).toByte()
 class GameState {
 
     // todo: private var opponent: BluetoothDevice? = null
+    private var opponentName: String? =
+        null // opponent's phone name
     private var opponentAddress: String? =
         null // typically 17-byte address String like 00:11:22:AA:BB:CC
     private var opponentAlias: String? =
@@ -86,14 +88,6 @@ class GameState {
         handMine[4] = deck[48]
         handMine[5] = deck[50]
         return byteArrayOf(DEAL_START, ME_MINE, deck[50], deck[48], deck[46], deck[44], deck[42], deck[40])
-    }
-
-    fun setOpponentAlias(alias: String): Unit {
-        opponentAlias = alias
-    }
-
-    fun getOpponentAlias(): String? {
-        return opponentAlias
     }
 
     fun getResyncFlag(): Byte {
@@ -205,24 +199,8 @@ class GameState {
         return cut
     }
 
-    fun getHandMine(): ByteArray {
-        return handMine
-    }
-
-    fun getHandOppo(): ByteArray {
-        return handOppo
-    }
-
     fun getCrib(): ByteArray {
         return crib
-    }
-
-    fun getStarter(): Byte {
-        return starter
-    }
-
-    fun setStarter(starterCard: Byte) {
-        starter = starterCard
     }
 
     fun getPlayWhosNextTurn(): Byte {
@@ -231,10 +209,6 @@ class GameState {
 
     fun setPlayWhosNextTurn(player: Byte) {
         playWhosNextTurn = player
-    }
-
-    fun getPlayGoCount(): Byte {
-        return playGoCount
     }
 
     fun setPlayGoCount(count: Byte) {
@@ -283,16 +257,28 @@ class GameState {
         }
     }
 
-    fun getplayedCards(): ByteArray {
-        return playedCards
+    fun getOpponentName(): String? {
+        return opponentName
     }
 
-    fun getplayedStartIndex(): Byte {
-        return playedStartIndex
+    fun setOpponentName(name: String) {
+        opponentName = name
     }
 
-    fun getplayedNextIndex(): Byte {
-        return playedNextIndex
+    fun getOpponentAddress(): String? {
+        return opponentAddress
+    }
+
+    fun setOpponentAddress(address: String) {
+        opponentAddress = address
+    }
+
+    fun getOpponentAlias(): String? {
+        return opponentAlias
+    }
+
+    fun setOpponentAlias(alias: String) {
+        opponentAlias = alias
     }
 
     fun serializeGameState(): ByteArray {

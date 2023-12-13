@@ -32,6 +32,7 @@ import androidx.navigation.NavController
 import name.jdstew.trailcribbage.GameModel
 import name.jdstew.trailcribbage.GameModelListener
 import name.jdstew.trailcribbage.R
+import name.jdstew.trailcribbage.cribbage.CUT_OPPONENT_CUT
 import name.jdstew.trailcribbage.cribbage.Deck
 import name.jdstew.trailcribbage.cribbage.GameMessaging
 
@@ -48,8 +49,13 @@ class CutViewModel(
     }
 
     override fun updateState(newState: ByteArray) {
-//        TODO("interpret the byte array")
-//        TODO("if both cards have been selected, then...")
+        if (newState[0] == CUT_OPPONENT_CUT) {
+            opponentCutDrawableID = CardLookup.getCardDrawableID(newState[0].toInt())
+        }
+        if (thisPlayerCutDrawableID != DEFAULT_CARD_INDEX &&
+            opponentCutDrawableID != DEFAULT_CARD_INDEX) {
+            compareCutCards()
+        }
     }
 
     var thisPlayerCutDrawableID = CardLookup.getCardDrawableID(DEFAULT_CARD_INDEX)
@@ -71,7 +77,31 @@ class CutViewModel(
         val cardIndex = deck[cutCardPosition.value.toInt() - 1].toInt()
         thisPlayerCutDrawableID = CardLookup.getCardDrawableID(cardIndex)
         gameModel.updateState(GameMessaging.getCutSelectedMessage(cardIndex))
-//        TODO("if both cards have been selected, then...")
+        if (thisPlayerCutDrawableID != DEFAULT_CARD_INDEX &&
+            opponentCutDrawableID != DEFAULT_CARD_INDEX) {
+            compareCutCards()
+        }
+    }
+
+    private fun compareCutCards() {
+        val myCard = Deck.getCardValue(CardLookup.getCardIndex(thisPlayerCutDrawableID))
+        val oppoCard = Deck.getCardValue(CardLookup.getCardIndex(opponentCutDrawableID))
+
+        if (myCard < oppoCard) {
+            // I am dealer first
+
+        } else if (myCard > oppoCard) {
+            // opponent will be dealer first
+
+        } else {
+            // cards match, then re-cut
+
+        }
+
+        // todo: compute who has the lowest card or equal
+        // todo: Toast the result of the above
+        // todo: if not equal, set this GameModel who will be the dealer
+        // todo: GameModel... navigate to the next step
     }
 
     companion object {
@@ -87,7 +117,6 @@ class CutViewModel(
 
 @Composable
 fun CutScreen(
-    navController: NavController,
     cutViewModel: CutViewModel = viewModel(factory = CutViewModel.Factory)
 ) {
     var sliderPosition by remember { mutableFloatStateOf(25f) }
