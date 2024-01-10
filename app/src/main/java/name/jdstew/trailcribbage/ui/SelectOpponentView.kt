@@ -19,17 +19,41 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import name.jdstew.trailcribbage.GameModel
+import name.jdstew.trailcribbage.GameModelListener
+import name.jdstew.trailcribbage.cribbage.CUT_MY_CUT
+import name.jdstew.trailcribbage.cribbage.CUT_OPPONENT_CUT
+import name.jdstew.trailcribbage.cribbage.CUT_START
 
-class OpponentViewModel() : ViewModel() {
+class OpponentViewModel() : GameModelListener, ViewModel() {
+    var bleDevicesFound = mutableListOf<BluetoothDevice>()
+        private set
 
     private val gameModel = GameModel
     private val bluetoothBroker = gameModel.getBluetoothBroker()
-    val bleDevicesFound = mutableStateListOf<BluetoothDevice>()
+    init {
+        gameModel.addGameModelListener(this)
+        bluetoothBroker.scanForBleDevices(this)
+    }
+
+    override fun onCleared() { // when ViewModel is destroyed
+        super.onCleared()
+        gameModel.removeGameModelListener(this)
+    }
+
+    override fun updateState(message: ByteArray) {
+
+    }
+
+    fun addBleDeviceFound(device: BluetoothDevice) {
+        bleDevicesFound.add(device)
+    }
+
     @SuppressLint("MissingPermission")
     fun selectBleDevice(device: BluetoothDevice) {
         if (bluetoothBroker.selectBluetoothDevice(device)) {
             gameModel.setOpponentName(device.name)
             gameModel.setOpponentAddress(device.address)
+            gameModel.updateState(byteArrayOf(CUT_START, 0, 0, 0, 0, 0, 0, 0))
         }
     }
 
@@ -45,9 +69,9 @@ class OpponentViewModel() : ViewModel() {
 
 @SuppressLint("MissingPermission")
 @Composable
-fun SelectOpponentScreen(
-    opponentViewModel: OpponentViewModel = viewModel(factory = OpponentViewModel.Factory)
-) {
+fun SelectOpponentScreen() {
+
+    val opponentViewModel: OpponentViewModel = viewModel(factory = OpponentViewModel.Factory)
 
     LazyColumn(modifier = Modifier
         .fillMaxSize()

@@ -1,5 +1,5 @@
 package name.jdstew.trailcribbage
 
 interface GameModelListener {
-    fun updateState(newState: ByteArray)
+    fun updateState(message: ByteArray)
 }

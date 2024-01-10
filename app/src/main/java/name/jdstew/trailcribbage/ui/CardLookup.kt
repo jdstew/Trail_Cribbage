@@ -3,6 +3,7 @@ package name.jdstew.trailcribbage.ui
 import name.jdstew.trailcribbage.R
 
 const val DEFAULT_CARD_INDEX = -1
+const val FACE_CARD_INDEX = 52
 
 object CardLookup {
     private val cardMap = mapOf(
@@ -58,7 +59,8 @@ object CardLookup {
         48 to R.drawable.card_48,
         49 to R.drawable.card_49,
         50 to R.drawable.card_50,
-        51 to R.drawable.card_51
+        51 to R.drawable.card_51,
+        FACE_CARD_INDEX to R.drawable.face_card
     )
 
     fun getCardDrawableID(index: Int): Int {

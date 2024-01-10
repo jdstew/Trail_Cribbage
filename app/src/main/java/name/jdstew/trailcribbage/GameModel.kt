@@ -2,6 +2,7 @@ package name.jdstew.trailcribbage
 
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
+import android.os.CountDownTimer
 import android.util.Log
 import name.jdstew.trailcribbage.bluetooth.BluetoothBroker
 import name.jdstew.trailcribbage.cribbage.*
@@ -48,7 +49,7 @@ object GameModel : GameModelListener {
     }
 
     override fun updateState(newMessage: ByteArray) {
-        if (!GameMessaging.isMessageLogical(gameState.getGameState(), newMessage)) {
+        if (!GameMessaging.isMessageLogical(gameState.getLastMessage(), newMessage)) {
             Log.e(TAG, "New message is not logical")
             // todo: process a game re-sync
             return
@@ -85,7 +86,6 @@ object GameModel : GameModelListener {
 
     fun processStart(message: ByteArray) {
         gameState = GameState()
-        gameState.setGameState(GAME_START)
 
         // todo: need intermediate stage of opponent selection
     }
@@ -94,15 +94,12 @@ object GameModel : GameModelListener {
         // set and retransmit cut values
         when (message[0]) {
             CUT_START -> { // received by both sides
-                gameState.setGameState(CUT_START)
                 // ...wait for selections
             }
             CUT_MY_CUT -> {
-                gameState.setGameState(CUT_MY_CUT)
                 gameState.setMyCut(message[1])
             }
             CUT_OPPONENT_CUT -> {
-                gameState.setGameState(CUT_OPPONENT_CUT)
                 gameState.setOpponentCut(message[1])
             }
         }
@@ -134,16 +131,13 @@ object GameModel : GameModelListener {
     fun processDeal(message: ByteArray) {
         when (message[0]) {
             DEAL_START -> {
-                gameState.setGameState(DEAL_START)
                 // ...wait for crib selections to come in
             }
             DEAL_PONE_COMPLETE -> {
                 gameState.setOpponentCrib(message[1], message[2])
-                gameState.setGameState(DEAL_PONE_COMPLETE)
             }
             DEAL_DEALER_COMPLETE -> {
                 gameState.setDealerCrib(message[1], message[2])
-                gameState.setGameState(DEAL_DEALER_COMPLETE)
             }
         }
 
@@ -157,11 +151,9 @@ object GameModel : GameModelListener {
     fun processDealStarter(message: ByteArray) {
         when (message[0]) {
             DEAL_STARTER_CUT -> {
-                gameState.setGameState(DEAL_STARTER_CUT)
                 // ...wait for opponent's message
             }
             DEAL_STARTER_SELECTED -> {
-                gameState.setGameState(DEAL_STARTER_SELECTED)
                 if (gameState.getDealerID() == DEALER_IS_ME) {
                     val starterIndex = gameState.getCardFromDeck(message[1])
                     updateState(byteArrayOf(DEAL_STARTER_REVEALED, starterIndex, 0, 0, 0, 0, 0, 0))
@@ -221,7 +213,6 @@ object GameModel : GameModelListener {
     fun processPlay(message: ByteArray) {
         if (message[1] == 0.toByte()) {
             // do nothing, simply initiating this game phase and return point
-            gameState.setGameState(PLAY_START)
             return
         }
 
@@ -271,17 +262,14 @@ object GameModel : GameModelListener {
     fun processShow(message: ByteArray) {
         when (message[0]) {
             SHOW_PONE_HAND -> {
-                gameState.setGameState(SHOW_PONE_HAND)
                 // score
                 // check for winner
             }
             SHOW_DEALER_HAND -> {
-                gameState.setGameState(SHOW_DEALER_HAND)
                 // score
                 // check for winner
             }
             SHOW_DEALER_CRIB -> {
-                gameState.setGameState(SHOW_DEALER_CRIB)
                 // score
                 // check for winner
             }
@@ -289,7 +277,6 @@ object GameModel : GameModelListener {
     }
 
     fun processCompletion(message: ByteArray) {
-        gameState.setGameState(COMPLETION)
         transmitStateUpdate(message)
 
         // swap dealers
@@ -306,12 +293,10 @@ object GameModel : GameModelListener {
     }
 
     fun processFinished(message: ByteArray) {
-        gameState.setGameState(FINISHED)
         transmitStateUpdate(message)
 
         // todo: announce winner
         gameState = GameState()
-        gameState.setGameState(GAME_START)
         transmitStateUpdate(byteArrayOf(GAME_START, 0, 0, 0, 0, 0, 0, 0))
     }
 
@@ -319,6 +304,37 @@ object GameModel : GameModelListener {
 
     }
 
+    fun isDealerMe(): Boolean {
+        return gameState.getDealerID() == DEALER_IS_ME
+    }
+
+    fun isItMyTurn(): Boolean {
+        return gameState.getPlayWhosNextTurn() == ME_MINE
+    }
+
+    fun getOppoPlayHand(): ByteArray {
+        return gameState.getPlayHandOppo()
+    }
+
+    fun getPlayStack(): ByteArray {
+        return gameState.getPlayedCards()
+    }
+
+    fun getMyPlayHand(): ByteArray {
+        return gameState.getPlayHandMine()
+    }
+
+    fun getOpponentScore(): Byte {
+        return gameState.getOpponentScore()
+    }
+
+    fun getMyScore(): Byte {
+        return gameState.getMyScore()
+    }
+
+    fun getStarterCard(): Byte {
+        return gameState.getStarterCard()
+    }
     fun getOpponentName(): String? {
         return gameState.getOpponentName()
     }
@@ -342,4 +358,17 @@ object GameModel : GameModelListener {
     fun setOpponentAlias(alias: String) {
         gameState.setOpponentAlias(alias)
     }
+
+    private fun pause(seconds: Int = 3) {
+        object : CountDownTimer(seconds.toLong() * 1_000L, Long.MAX_VALUE) {
+            override fun onTick(millisUntilFinished: Long) {
+                // do nothing - will never occur
+            }
+
+            override fun onFinish() {
+                return // or nothing?
+            }
+        }.start()
+    }
+
 }

@@ -125,9 +125,9 @@ object GameMessaging {
         FINISHED to setOf(GAME_START)
     )
 
-    fun isMessageLogical(currentState: Byte, message: ByteArray): Boolean {
-        if (!gameSequence.containsKey(currentState)) false
-        val nextPossibleStates = gameSequence[currentState]
+    fun isMessageLogical(lastMessage: ByteArray, message: ByteArray): Boolean {
+        if (!gameSequence.containsKey(lastMessage[0])) false
+        val nextPossibleStates = gameSequence[lastMessage[0]]
         if (nextPossibleStates!!.contains(message[0])) true
         return false
     }

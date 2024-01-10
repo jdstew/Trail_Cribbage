@@ -1,5 +1,7 @@
 package name.jdstew.trailcribbage.cribbage
 
+import name.jdstew.trailcribbage.ui.DEFAULT_CARD_INDEX
+import name.jdstew.trailcribbage.ui.FACE_CARD_INDEX
 import java.util.Random
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -42,6 +44,14 @@ object Deck {
     val CARD_RANK_NAME: Array<String> = arrayOf("ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king")
 
     fun getCardDisplayedName(cardIndex: Int): String {
+        if (cardIndex == DEFAULT_CARD_INDEX) {
+            return "Card placeholder"
+        }
+
+        if (cardIndex == FACE_CARD_INDEX) {
+            return "Face down card"
+        }
+
         val sb: StringBuilder = StringBuilder()
 
         sb.append(CARD_RANK_NAME.get(cardIndex % 13))

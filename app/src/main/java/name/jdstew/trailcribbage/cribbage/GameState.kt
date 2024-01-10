@@ -1,5 +1,8 @@
 package name.jdstew.trailcribbage.cribbage
 
+import name.jdstew.trailcribbage.GameModel
+import java.io.Serializable
+
 /*
     const val BLUETOOTH_UNKNOWN: Byte  = 0
     const val BLUETOOTH_ENABLED: Byte  = 1
@@ -12,7 +15,8 @@ const val DEALER_IS_OPPONENT = (-127).toByte()
 const val ME_MINE = 127.toByte()
 const val OPPONENT_THEIRS = (-127).toByte()
 
-class GameState {
+class GameState: Serializable {
+    val serialVersionUID = 31415926535L
 
     // todo: private var opponent: BluetoothDevice? = null
     private var opponentName: String? =
@@ -31,9 +35,7 @@ class GameState {
     // ------------------------------------------------ start of game state
     //
     // game summary (5 bytes)
-    private var resyncFlag: Byte =
-        0  // 0 if normal data exchange, otherwise force a re-sync to this state
-    private var gameState: Byte = 0  // index to GAME_SEQUENCE
+    private var lastMessage: ByteArray = ByteArray(8)
     private var playerScore: ByteArray = ByteArray(2)  // [2] 0..121
     private var dealerID: Byte = 0 // value: 0 -> neither, DEALER_IS_ME -> me, DEALER_IS_OPPONENT -> them
 
@@ -65,6 +67,14 @@ class GameState {
     // deck is (52 bytes padded to 64 bytes), held and saved only by the dealer during DEAL phase
     private var deck: ByteArray = Deck.getShuffledDeck()  // [52] random card indexes
 
+    fun getLastMessage(): ByteArray {
+        return lastMessage
+    }
+
+    fun setLastMessage(message: ByteArray) {
+        lastMessage = message.clone()
+    }
+
     fun getCardFromDeck(deckIndex: Byte): Byte {
         return deck[deckIndex.toInt()]
     }
@@ -88,18 +98,6 @@ class GameState {
         handMine[4] = deck[48]
         handMine[5] = deck[50]
         return byteArrayOf(DEAL_START, ME_MINE, deck[50], deck[48], deck[46], deck[44], deck[42], deck[40])
-    }
-
-    fun getResyncFlag(): Byte {
-        return resyncFlag
-    }
-
-    fun getGameState(): Byte {
-        return gameState
-    }
-
-    fun setGameState(state: Byte) {
-        gameState = state
     }
 
     fun getMyCut(): Byte {
@@ -166,6 +164,8 @@ class GameState {
         }
     }
 
+
+
     fun resetCut() {
         cut[0] = -1
         cut[1] = -1
@@ -220,6 +220,18 @@ class GameState {
         playedNextIndex = (index + 1).toByte()
     }
 
+    fun getPlayHandOppo(): ByteArray {
+        return playHandOppo.clone()
+    }
+
+    fun getPlayedCards(): ByteArray {
+        return playHandMine.clone()
+    }
+
+    fun getPlayHandMine(): ByteArray {
+        return playedCards.clone()
+    }
+
     fun getPlayedCardsSum(): Byte {
         var sum = 0
         for (i in playedStartIndex.toInt()..playedNextIndex.toInt()) {
@@ -227,6 +239,10 @@ class GameState {
         }
 
         return sum.toByte()
+    }
+
+    fun getStarterCard(): Byte {
+        return starter
     }
 
     fun getPlayedCardsScore(): ScoringReport {
@@ -255,6 +271,14 @@ class GameState {
         } else {
             return playerScore[1]
         }
+    }
+
+    fun getOpponentScore(): Byte {
+        return playerScore[1]
+    }
+
+    fun getMyScore(): Byte {
+        return playerScore[1]
     }
 
     fun getOpponentName(): String? {
@@ -286,8 +310,6 @@ class GameState {
         var index = 0
 
         // game summary (5 bytes)
-        output[index++] = resyncFlag
-        output[index++] = gameState
         for (i in playerScore) {
             output[index++] = i
         }
@@ -331,17 +353,8 @@ class GameState {
     fun deserializeGameState(input: ByteArray): GameState {
         val newGameState = GameState()
 
-        // game summary (5 bytes)
-        newGameState.resyncFlag = input[0]
-        newGameState.gameState = input[1]
-        var index = 0
-        for (i in 2..3) {
-            newGameState.playerScore[index++] = input[i]
-        }
-        newGameState.dealerID = input[4]
-
         // cut (2 bytes)
-        index = 0
+        var index = 0
         for (i in 5..6) {
             newGameState.cut[index++] = input[i]
         }
@@ -386,10 +399,6 @@ class GameState {
         val sb: StringBuilder = StringBuilder()
 
         // game summary (5 bytes)
-        sb.append(resyncFlag)
-        sb.append(',')
-        sb.append(gameState)
-        sb.append(',')
         for (b in playerScore) {
             sb.append(b)
             sb.append(',')

@@ -4,16 +4,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.absoluteOffset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.Text
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -23,92 +21,70 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import name.jdstew.trailcribbage.GameModel
 import name.jdstew.trailcribbage.GameModelListener
-import name.jdstew.trailcribbage.R
+import name.jdstew.trailcribbage.cribbage.CUT_MY_CUT
 import name.jdstew.trailcribbage.cribbage.CUT_OPPONENT_CUT
+import name.jdstew.trailcribbage.cribbage.CUT_START
 import name.jdstew.trailcribbage.cribbage.Deck
 import name.jdstew.trailcribbage.cribbage.GameMessaging
 
-class CutViewModel(
-    private val gameModel: GameModel
-) : GameModelListener, ViewModel() {
-    init {
-        gameModel.addGameModelListener(this)
-    }
+class CutViewModel() : GameModelListener, ViewModel() {
+    var isMyCardSelected = false
+        private set
 
-    override fun onCleared() {
-        super.onCleared()
-        gameModel.removeGameModelListener(this)
-    }
-
-    override fun updateState(newState: ByteArray) {
-        if (newState[0] == CUT_OPPONENT_CUT) {
-            opponentCutDrawableID = CardLookup.getCardDrawableID(newState[0].toInt())
-        }
-        if (thisPlayerCutDrawableID != DEFAULT_CARD_INDEX &&
-            opponentCutDrawableID != DEFAULT_CARD_INDEX) {
-            compareCutCards()
-        }
-    }
-
-    var thisPlayerCutDrawableID = CardLookup.getCardDrawableID(DEFAULT_CARD_INDEX)
+    var myCutDrawableID = CardLookup.getCardDrawableID(DEFAULT_CARD_INDEX)
         private set
 
     var opponentCutDrawableID = CardLookup.getCardDrawableID(DEFAULT_CARD_INDEX)
         private set
 
-    var cutCardPosition = mutableFloatStateOf(25f)
-        private set
+    private val gameModel = GameModel
 
-    fun setCutCardPosition(cardNumber: Float = 25f) {
-        cutCardPosition.floatValue = cardNumber
-        println("view model selected cut card changed to " + cutCardPosition.floatValue)
+    init {
+        gameModel.addGameModelListener(this)
     }
 
-    fun selectCutCard() {
+    override fun onCleared() { // when ViewModel is destroyed
+        super.onCleared()
+        gameModel.removeGameModelListener(this)
+    }
+
+    override fun updateState(message: ByteArray) {
+        when (message[0]) {
+            CUT_START -> {
+                isMyCardSelected = false
+                myCutDrawableID = CardLookup.getCardDrawableID(DEFAULT_CARD_INDEX)
+                opponentCutDrawableID = CardLookup.getCardDrawableID(DEFAULT_CARD_INDEX)
+            }
+
+            CUT_MY_CUT -> {
+                myCutDrawableID = CardLookup.getCardDrawableID(message[1].toInt())
+            }
+
+            CUT_OPPONENT_CUT -> {
+                opponentCutDrawableID = CardLookup.getCardDrawableID(message[1].toInt())
+            }
+        }
+    }
+
+    fun selectCutCard(cardNumber: Float = 25f) {
+        isMyCardSelected = true
         val deck = Deck.getShuffledDeck()
-        val cardIndex = deck[cutCardPosition.value.toInt() - 1].toInt()
-        thisPlayerCutDrawableID = CardLookup.getCardDrawableID(cardIndex)
+        val cardIndex = deck[cardNumber.toInt() - 1].toInt()
+        myCutDrawableID = CardLookup.getCardDrawableID(cardIndex)
         gameModel.updateState(GameMessaging.getCutSelectedMessage(cardIndex))
-        if (thisPlayerCutDrawableID != DEFAULT_CARD_INDEX &&
-            opponentCutDrawableID != DEFAULT_CARD_INDEX) {
-            compareCutCards()
-        }
-    }
-
-    private fun compareCutCards() {
-        val myCard = Deck.getCardValue(CardLookup.getCardIndex(thisPlayerCutDrawableID))
-        val oppoCard = Deck.getCardValue(CardLookup.getCardIndex(opponentCutDrawableID))
-
-        if (myCard < oppoCard) {
-            // I am dealer first
-
-        } else if (myCard > oppoCard) {
-            // opponent will be dealer first
-
-        } else {
-            // cards match, then re-cut
-
-        }
-
-        // todo: compute who has the lowest card or equal
-        // todo: Toast the result of the above
-        // todo: if not equal, set this GameModel who will be the dealer
-        // todo: GameModel... navigate to the next step
     }
 
     companion object {
         val Factory: ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                return CutViewModel(GameModel) as T
+                return CutViewModel() as T
             }
         }
     }
@@ -116,19 +92,21 @@ class CutViewModel(
 
 
 @Composable
-fun CutScreen(
-    cutViewModel: CutViewModel = viewModel(factory = CutViewModel.Factory)
-) {
-    var sliderPosition by remember { mutableFloatStateOf(25f) }
-    var selectCardEnabled by remember {mutableStateOf(true)}
+fun CutScreen() {
 
-    Column {
-        Text("Cut - lower card becomes dealer")
+    // see ViewModel for view configuration
+    val cutViewModel: CutViewModel = viewModel(factory = CutViewModel.Factory)
+    var sliderPosition by remember { mutableFloatStateOf(25f) } // initial selection is middle card
+    var selectCardEnabled by remember { mutableStateOf(true) }
+
+    Column(modifier = Modifier.padding(5.dp)) {
+
+        Text("Select your cut card using the slider, then press button to reveal it.")
         Row {
             Text("Opponent:")
             Icon(
                 painter = painterResource(cutViewModel.opponentCutDrawableID!!),
-                contentDescription = stringResource(id = R.string.card_hole),
+                contentDescription = Deck.getCardDisplayedName(cutViewModel.opponentCutDrawableID),
                 modifier = Modifier.size(size = 200.dp),
                 tint = Color.Unspecified
             )
@@ -136,29 +114,30 @@ fun CutScreen(
         Row {
             Text("You:")
             Icon(
-                painter = painterResource(cutViewModel.thisPlayerCutDrawableID!!),
-                contentDescription = stringResource(id = R.string.card_hole),
+                painter = painterResource(cutViewModel.myCutDrawableID!!),
+                contentDescription = Deck.getCardDisplayedName(cutViewModel.myCutDrawableID),
                 modifier = Modifier.size(size = 200.dp),
                 tint = Color.Unspecified
             )
         }
+
         Box {
-            val totalWidth = LocalConfiguration.current.screenWidthDp
+            val displayWidth = LocalConfiguration.current.screenWidthDp.toFloat() - 10.dp.value
 //            println("screen width is $totalWidth dp")
 
             val nonSelectedCardOffset = 12.dp
-            val cardWidth = 36.dp
+            val cardWidth = displayWidth / 52
             var xOffset = 0f
 
-            val offsetIncrement = (totalWidth.toFloat() - cardWidth.value) / 51f
+            val offsetIncrement = (displayWidth - cardWidth) / 51f
             for (i in 1..52) {
 //                println("placing card at x = $xOffset")
                 val vOffset = if (i == sliderPosition.toInt()) 0.dp else nonSelectedCardOffset
                 Icon(
-                    painter = painterResource(R.drawable.face_card),
-                    contentDescription = stringResource(id = R.string.face_card),
+                    painter = painterResource(CardLookup.getCardDrawableID(FACE_CARD_INDEX)),
+                    contentDescription = Deck.getCardDisplayedName(FACE_CARD_INDEX),
                     modifier = Modifier
-                        .width(cardWidth)
+                        .width(cardWidth.dp)
                         .absoluteOffset(
                             x = xOffset.dp,
                             y = vOffset
@@ -169,28 +148,17 @@ fun CutScreen(
             }
         }
         Slider(
-            value = cutViewModel.cutCardPosition.floatValue,
+            value = sliderPosition,
             onValueChange = { sliderPosition = it },
-            onValueChangeFinished = { cutViewModel.setCutCardPosition(sliderPosition) },
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.secondary,
-                activeTrackColor = MaterialTheme.colorScheme.secondary,
-                inactiveTrackColor = MaterialTheme.colorScheme.secondaryContainer,
-            ),
-            steps = 52,
-            enabled = selectCardEnabled,
-            valueRange = 1f..52f
+            enabled = !cutViewModel.isMyCardSelected,
+            valueRange = 1f..52f,
+            steps = 52
         )
         Button(
             onClick = {
-                selectCardEnabled = false
-                cutViewModel.selectCutCard()
-
-//                navController.navigate(NavigationRoute.DealScreen.route) {
-//                    popUpTo(NavigationRoute.SplashScreen.route)
-//                }
+                cutViewModel.selectCutCard(sliderPosition)
             },
-            enabled = selectCardEnabled
+            enabled = !cutViewModel.isMyCardSelected
         ) {
             Text("Reveal your cut card")
         }
