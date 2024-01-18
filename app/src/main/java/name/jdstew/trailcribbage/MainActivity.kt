@@ -105,7 +105,8 @@ class MainActivity : ComponentActivity() {
             bluetoothManager = bluetoothManager,
             bluetoothAdapter = bluetoothAdapter,
         )
-        // todo: navigateTo() ...scan for opponents screen
+
+        navigateTo(NavigationRoute.SelectOpponentScreen, NavigationRoute.SplashScreen)
     }
     
     override fun onStart() {
@@ -130,7 +131,7 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, message, Toast.LENGTH_LONG).show()
     }
 
-    fun announce(player: Byte, messages: List<String>) {
+    fun announce(player: Byte, messages: MutableList<String>) {
         if (player == ME_MINE) {
             announce("You:")
         } else {

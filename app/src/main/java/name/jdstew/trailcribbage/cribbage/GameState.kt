@@ -172,6 +172,8 @@ class GameState: Serializable {
     }
 
     fun resetRound() {
+        dealerID = (dealerID * -1).toByte()
+
         // reset deal and show
         handMine = ByteArray(6) { _ -> -1 }
         handOppo = ByteArray(6) { _ -> -1 }
